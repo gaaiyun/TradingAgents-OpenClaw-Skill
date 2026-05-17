@@ -1,240 +1,119 @@
-# TradingAgents Skill for OpenClaw
+# TradingAgents OpenClaw Skill
 
-多智能体交易框架集成 - 让 AI 智能体团队帮你分析股票！
+> 一个**三引擎**的股票分析 Skill：装了就能跑，没 LLM key 也能用，CI 友好。
 
-## 📦 安装
+把 [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)（多 LLM agent 辩论交易决策框架）包装成统一接口。v2 加了两件**别处没有**的事：
 
-### 1. 安装 TradingAgents 核心依赖
+1. **本地技术信号引擎**（`signals.py`）—— 不调 LLM、不需要 API key、就靠 yfinance + numpy 给可解释的交易信号。
+2. **三档 engine**（auto / llm / signals / mock）—— 装了 TradingAgents 用 LLM，没装自动降级到 signals，CI 用 mock。
+
+## 快速开始
 
 ```bash
-cd C:\Users\gaaiy\.openclaw\workspace\projects\TradingAgents-Official
 pip install -r requirements.txt
 ```
 
-### 2. 配置 API Keys
-
-在 `~/.openclaw/workspace/.env` 文件中添加：
-
-```bash
-# 选择一个 LLM 提供商
-OPENAI_API_KEY=sk-...          # OpenAI (推荐)
-# 或
-GOOGLE_API_KEY=...             # Google
-# 或
-ANTHROPIC_API_KEY=...          # Anthropic
-# 或
-XAI_API_KEY=...                # xAI
-
-# 可选：数据提供商（默认使用 yfinance，无需 API key）
-ALPHA_VANTAGE_API_KEY=...
-```
-
-## 🚀 快速开始
-
-### 在 Python 中使用
+### 1) 不需要 API key 的"立刻能跑"
 
 ```python
-from trading_agents import TradingAgentsSkill
+from __init__ import TradingAgentsSkill
 
-# 创建技能实例
-skill = TradingAgentsSkill()
-
-# 分析股票
-result = skill.analyze_stock("NVDA", "2024-05-10")
-
-# 查看结果
-print(f"操作建议：{result['action']}")
-print(f"置信度：{result['confidence']:.2%}")
-print(f"理由：{result['reasoning']}")
+skill = TradingAgentsSkill(engine="signals")   # 强制用本地信号引擎
+result = skill.analyze_stock("NVDA")
+print(result["action"], result["confidence"])
+print(result["reasoning"])
 ```
 
-### 使用便捷函数
-
-```python
-from trading_agents import analyze, quick_analyze, deep_analyze
-
-# 标准分析
-result = analyze("AAPL")
-
-# 快速分析（1 轮辩论）
-result = quick_analyze("MSFT")
-
-# 深度分析（3 轮辩论）
-result = deep_analyze("TSLA", debate_rounds=3)
-```
-
-### 命令行使用
+或者 CLI：
 
 ```bash
-# 标准分析
-python skills/trading-agents/__init__.py NVDA
-
-# 快速分析
-python skills/trading-agents/__init__.py AAPL --mode quick
-
-# 深度分析
-python skills/trading-agents/__init__.py MSFT --mode deep --debate-rounds 3
-
-# 指定日期
-python skills/trading-agents/__init__.py TSLA --date 2024-05-10
-
-# 保存到文件
-python skills/trading-agents/__init__.py NVDA --output result.json
+python __init__.py NVDA --engine signals
 ```
 
-## 🎯 功能特性
+### 2) 需要 LLM 时启用 TradingAgents
 
-### 多智能体协作
+```bash
+pip install tradingagents
+export OPENAI_API_KEY=sk-...
+python __init__.py NVDA --engine llm
+```
 
-TradingAgents 模拟真实交易公司的团队决策流程：
+> **注**：`tradingagents` 在 PyPI 上的版本 / 包名以官方仓库为准。如果是 dev 版本本地 clone 的，也可以：
+> ```bash
+> export TRADING_AGENTS_HOME=/path/to/TradingAgents-Official
+> ```
+> Skill 会自动加到 sys.path。
 
-- **基本面分析师**：评估公司财务和内在价值
-- **情绪分析师**：分析社交媒体和公众情绪
-- **新闻分析师**：监控全球新闻和宏观指标
-- **技术分析师**：使用 MACD、RSI 等技术指标
-- **多头研究员**：寻找上涨机会
-- **空头研究员**：识别潜在风险
-- **交易员**：综合报告，做出交易决策
-- **风险管理**：评估市场波动性和流动性
-- **投资组合经理**：最终审批交易
+### 3) CI / 演示用 mock
 
-### 支持的 LLM 提供商
+```python
+result = TradingAgentsSkill(engine="mock").analyze_stock("AAPL")
+# 返回 stub decision，不联网、不调 LLM
+```
 
-- ✅ OpenAI (GPT-5.x, GPT-4.x)
-- ✅ Google (Gemini 3.x, 2.x)
-- ✅ Anthropic (Claude 4.x, 3.x)
-- ✅ xAI (Grok 4.x)
-- ✅ OpenRouter
-- ✅ Ollama (本地模型)
+## 输出统一 schema
 
-### 数据源
-
-- **yfinance**（默认，无需 API key）
-- **Alpha Vantage**（需要 API key）
-
-## 📊 输出示例
+不管哪个 engine，都返回相同结构：
 
 ```json
 {
   "ticker": "NVDA",
   "date": "2024-05-10",
-  "action": "BUY",
-  "quantity": 100,
-  "confidence": 0.75,
-  "reasoning": "基本面强劲，AI 需求增长，技术面突破...",
-  "risk_level": "MEDIUM",
-  "target_price": 950.00,
-  "stop_loss": 800.00,
-  "analysis_details": {
-    "fundamental_analysis": {...},
-    "technical_analysis": {...},
-    "sentiment_analysis": {...},
-    "news_analysis": {...},
-    "bull_arguments": [...],
-    "bear_arguments": [...],
-    "risk_assessment": {...}
-  }
+  "action": "BUY" | "SELL" | "HOLD" | "ERROR",
+  "confidence": 0.78,
+  "reasoning": "...",
+  "risk_level": "LOW" | "MEDIUM" | "HIGH",
+  "target_price": 1234.5,
+  "stop_loss": 1100.0,
+  "engine": "llm" | "signals-v2" | "mock",
+  "analysis_details": { ... }
 }
 ```
 
-## ⚙️ 高级配置
+UI / 上层调用方一套代码就能消费三种 engine。
 
-### 自定义 LLM 配置
+## signals.py 在做什么
 
-```python
-config = {
-    "llm_provider": "openai",
-    "deep_think_llm": "gpt-5.2",      # 复杂推理模型
-    "quick_think_llm": "gpt-5-mini",  # 快速任务模型
-    "max_debate_rounds": 2,           # 辩论轮数
-}
+| 指标 | 用法 |
+|---|---|
+| RSI(14) Wilder | 超买/超卖 |
+| MACD(12,26,9) | 金叉/死叉 |
+| Bollinger(20, 2σ) | 短期超买/超卖 |
+| MA stack(20/50/200) | 多头/空头排列 |
+| OBV 5d slope | 资金净流入/出 |
+| ATR(14) | 动态止损（默认 2×ATR） |
 
-skill = TradingAgentsSkill(config=config)
-```
+每个指标都附带 `bullish / bearish / neutral` 判断和文字 rationale，加权投票得最终 action + 置信度。结果可以直接喂给 LLM 做"上下文摘要"——所以即使你之后接上 TradingAgents，这套数据也不会浪费。
 
-### 自定义数据源
-
-```python
-config = {
-    "data_vendors": {
-        "core_stock_apis": "alpha_vantage",
-        "technical_indicators": "alpha_vantage",
-        "fundamental_data": "yfinance",
-        "news_data": "yfinance",
-    }
-}
-
-skill = TradingAgentsSkill(config=config)
-```
-
-### 运行时配置
-
-```python
-skill = TradingAgentsSkill()
-
-# 修改配置
-skill.set_config("max_debate_rounds", 3)
-skill.set_config("llm_provider", "anthropic")
-
-# 获取当前配置
-current = skill.get_config()
-```
-
-## 🧠 学习与反思
-
-TradingAgents 可以从历史交易中学习：
-
-```python
-skill = TradingAgentsSkill()
-
-# 反思上次交易（假设回报率为 15%）
-result = skill.reflect_and_remember(0.15)
-
-if result['success']:
-    print("学习成功！")
-```
-
-## 📁 文件结构
+## 文件清单
 
 ```
-skills/trading-agents/
-├── SKILL.md              # OpenClaw 技能描述
-├── __init__.py           # 主代码（技能实现）
-├── requirements.txt      # Python 依赖
-├── README.md             # 本文件
-├── example_usage.py      # 使用示例
-└── test_skill.py         # 测试脚本
+.
+├─ __init__.py            # TradingAgentsSkill + CLI（多 engine 路由）
+├─ signals.py             # 本地技术信号引擎（v2 新增）
+├─ requirements.txt
+├─ tests/
+│   ├─ test_signals.py        # 13 个指标 + 聚合测试
+│   └─ test_skill_engines.py  # 8 个 engine 路由 + mock 测试
+├─ example_usage.py       # 端到端示例
+├─ SKILL.md               # OpenClaw 描述
+└─ _meta.json             # OpenClaw metadata
 ```
 
-## 🧪 测试
+## v2 修了什么
 
-运行测试脚本：
+- 不再硬编码 `~/.openclaw/workspace/projects/TradingAgents-Official` 路径假设
+- 优先 `import tradingagents`（PyPI），失败再 fallback 到本地路径 + `TRADING_AGENTS_HOME` 环境变量
+- 不再要求 LLM key 才能 import skill（之前没装 TradingAgents 就 raise）
+- 加 21 个 pytest 测试（v1 是手动验证脚本）
+- README 去掉本机绝对路径
 
-```bash
-python skills/trading-agents/example_usage.py
-```
+## 路线图
 
-## ⚠️ 重要声明
+- 实时数据源切换（akshare / alpaca / polygon）
+- 期权希腊值与隐含波动率
+- 多 ticker 批量扫描 CLI（`--batch tickers.txt`）
 
-**TradingAgents 仅供研究使用！**
+## 许可
 
-- ❌ 不构成投资建议
-- ❌ 不保证交易表现
-- ❌ 请勿用于真实交易决策
-- ⚠️ 交易表现受多种因素影响（模型、温度、数据质量等）
-- ⚠️ 使用本框架进行实盘交易的风险由用户自行承担
-
-## 📚 参考资料
-
-- **论文**: [TradingAgents: Multi-Agents LLM Financial Trading Framework](https://arxiv.org/abs/2412.20138)
-- **GitHub**: https://github.com/TauricResearch/TradingAgents
-- **Discord**: https://discord.com/invite/hk9PGKShPK
-- **技术报告**: [Trading-R1](https://arxiv.org/abs/2509.11420)
-
-## 🤝 贡献
-
-欢迎提交问题和改进建议！
-
-## 📄 许可证
-
-遵循 TradingAgents-Official 项目的许可证。
+MIT

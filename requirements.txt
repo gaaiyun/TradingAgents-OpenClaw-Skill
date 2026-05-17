@@ -1,41 +1,30 @@
-# TradingAgents Skill for OpenClaw
-# 依赖包
+# TradingAgents OpenClaw Skill — 依赖
+# 安装：pip install -r requirements.txt
 
-# 核心依赖（与 TradingAgents-Official 保持一致）
-typing-extensions
-langchain-core>=0.3.0
-langchain-openai>=0.2.0
-langchain-experimental
+# ─── 核心（signals engine 用）─────────────────────────
+numpy>=1.24.0
 pandas>=2.0.0
 yfinance>=0.2.40
-stockstats>=0.5.0
-langgraph>=0.2.0
-rank-bm25
-setuptools
-backtrader
-parsel
 requests>=2.31.0
-tqdm
-pytz
 
-# LLM 客户端
-openai>=1.0.0
-langchain_anthropic>=0.3.0
-langchain_google_genai>=2.0.0
-anthropic>=0.40.0
-google-generativeai>=0.8.0
+# 测试
+pytest>=7.4.0
 
-# 可选：Redis（用于缓存）
-# redis>=5.0.0
+# ─── 可选：LLM engine 启用 TradingAgents ──────────────
+# 启用 LLM 决策时安装：
+#   pip install tradingagents
+# 或者本地 clone TradingAgents-Official 后设：
+#   export TRADING_AGENTS_HOME=/path/to/TradingAgents-Official
+#
+# TradingAgents 自身的依赖（仅当用 LLM engine 时需要）：
+# langgraph>=0.2.0
+# langchain-core>=0.3.0
+# langchain-openai>=0.2.0
+# openai>=1.0.0
+# anthropic>=0.40.0
+# google-generativeai>=0.8.0
+# stockstats>=0.5.0
+# backtrader
 
-# 可选：CLI 和 UI 界面
-# chainlit>=2.0.0
-# rich>=13.0.0
-# typer>=0.9.0
-# questionary>=2.0.0
-
-# 工具
+# ─── 可选：环境加载 ──────────────────────────────────
 python-dotenv>=1.0.0
-
-# 可选：Alpha Vantage（需要 API key）
-# alpha-vantage>=3.0.0
