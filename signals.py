@@ -51,15 +51,21 @@ def load_ohlcv(ticker: str, period: str = "1y", interval: str = "1d") -> pd.Data
                      auto_adjust=True, progress=False)
     if df is None or len(df) == 0:
         raise ValueError(f"yfinance 未返回 {ticker} 的数据")
-    # yfinance 在某些版本下返回 MultiIndex columns，flatten 一下
+    # 先把日期索引落成普通列，再统一小写——这样无论索引名叫 Date / Datetime
+    # （新版 yfinance 用大写），还是 MultiIndex columns，都能 flatten 成
+    # 小写的 date / open / high / low / close / volume。
+    df = df.reset_index()
     if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [c[0].lower() if isinstance(c, tuple) else str(c).lower() for c in df.columns]
+        df.columns = [c[0].lower() if isinstance(c, tuple) and c[0] else str(c).lower()
+                      for c in df.columns]
     else:
         df.columns = [str(c).lower() for c in df.columns]
-    df = df.reset_index().rename(columns={"date": "date", "datetime": "date"})
-    # 保证至少有 close/volume
+    df = df.rename(columns={"datetime": "date", "index": "date"})
+    # 保证至少有 close/volume/date
     if "close" not in df.columns or "volume" not in df.columns:
         raise ValueError(f"yfinance 返回的列不符合预期：{list(df.columns)}")
+    if "date" not in df.columns:
+        raise ValueError(f"yfinance 返回的列里没有日期列：{list(df.columns)}")
     return df.sort_values("date").reset_index(drop=True)
 
 
