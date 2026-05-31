@@ -132,42 +132,45 @@ ALPHA_VANTAGE_API_KEY=...
 }
 ```
 
-## 7. 文件位置
+## 7. 文件结构
+
+本 Skill 自身（signals engine 开箱即用，不依赖外部目录布局）：
 
 ```
-C:\Users\gaaiy\.openclaw\workspace\
-├── projects/TradingAgents-Official/
-│   ├── tradingagents/          # 核心模块
-│   │   ├── agents/             # 智能体定义
-│   │   ├── dataflows/          # 数据流
-│   │   ├── graph/              # LangGraph 流程
-│   │   ├── llm_clients/        # LLM 客户端
-│   │   └── default_config.py   # 默认配置
-│   ├── cli/                    # 命令行界面
-│   ├── main.py                 # 示例脚本
-│   └── requirements.txt        # 依赖
-└── skills/trading-agents/
-    ├── SKILL.md                # 本文件
-    ├── __init__.py             # OpenClaw 集成
-    └── requirements.txt        # 依赖
+TradingAgents-OpenClaw-Skill/
+├── __init__.py             # TradingAgentsSkill + CLI（多 engine 路由）
+├── signals.py              # 本地技术信号引擎（无需 API key）
+├── requirements.txt
+├── tests/                  # pytest（合成数据，无网络）
+├── example_usage.py        # 端到端示例
+└── SKILL.md                # 本文件
+```
+
+启用 LLM engine 时另需 TradingAgents 框架（PyPI 包或本地 clone）：
+
+```
+tradingagents/              # pip install tradingagents 后可直接 import
+├── agents/                 # 智能体定义
+├── dataflows/              # 数据流
+├── graph/                  # LangGraph 流程
+└── default_config.py       # 默认配置
 ```
 
 ## 8. 本地运行
 
-### 安装依赖
+### signals engine（无需 API key）
 ```bash
-cd C:\Users\gaaiy\.openclaw\workspace\projects\TradingAgents-Official
 pip install -r requirements.txt
+python __init__.py NVDA --engine signals
 ```
 
-### 使用 CLI
+### LLM engine（需要 TradingAgents + API key）
 ```bash
-python -m cli.main
-```
-
-### Python 脚本
-```bash
-python main.py
+pip install tradingagents
+export OPENAI_API_KEY=sk-...
+# 若为本地 clone，可改用环境变量指向：
+#   export TRADING_AGENTS_HOME=/path/to/TradingAgents-Official
+python __init__.py NVDA --engine llm
 ```
 
 ## 9. 在 OpenClaw 中使用
@@ -175,12 +178,11 @@ python main.py
 ### 示例对话
 ```
 用户：分析一下 NVDA 股票
-派蒙：好的！派蒙这就用 TradingAgents 来分析 NVDA~
-     正在调用多智能体框架...
-     [基本面分析师] 公司财务表现强劲...
-     [技术分析师] MACD 金叉，RSI 处于健康区间...
-     [风险管理] 波动性中等，建议控制仓位...
-     综合建议：BUY，目标价$950，止损$800
+助手：正在用 TradingAgents 多智能体框架分析 NVDA……
+     [基本面分析师] 公司财务表现强劲
+     [技术分析师] MACD 金叉，RSI 处于健康区间
+     [风险管理] 波动性中等，建议控制仓位
+     综合建议：BUY，目标价 $950，止损 $800
 ```
 
 ## 10. 注意事项

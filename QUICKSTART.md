@@ -1,173 +1,103 @@
-# TradingAgents Skill 快速入门指南
+# TradingAgents Skill 快速入门
 
-## 📦 5 分钟快速开始
+本 Skill 有三档 engine：`signals`（本地技术信号，开箱即用，无需 API key）、
+`llm`（TradingAgents 多智能体框架，需要 API key）、`mock`（CI / 演示）。
+下面从最省事的 signals 开始。
 
-### 步骤 1: 安装依赖（2 分钟）
+## 1. 安装
 
 ```bash
-# 进入 TradingAgents 项目目录
-cd C:\Users\gaaiy\.openclaw\workspace\projects\TradingAgents-Official
-
-# 安装所有依赖
 pip install -r requirements.txt
 ```
 
-### 步骤 2: 配置 API Key（1 分钟）
+signals engine 只依赖 numpy / pandas / yfinance，装完即可用。
 
-在 `C:\Users\gaaiy\.openclaw\workspace\.env` 文件中添加：
+## 2. 立刻能跑（signals engine，无需 API key）
 
-```bash
-# 选择一个 LLM 提供商（推荐 OpenAI）
-OPENAI_API_KEY=sk-your-api-key-here
-```
-
-**获取 API Key:**
-- OpenAI: https://platform.openai.com/api-keys
-- Google: https://makersuite.google.com/app/apikey
-- Anthropic: https://console.anthropic.com/settings/keys
-
-### 步骤 3: 测试运行（2 分钟）
+命令行：
 
 ```bash
-# 进入工作区
-cd C:\Users\gaaiy\.openclaw\workspace
-
-# 运行测试脚本
-python skills/trading-agents/test_skill.py
+python __init__.py NVDA --engine signals
+python __init__.py AAPL --engine signals --mode quick
 ```
 
-如果看到 `✅ 所有测试通过！`，说明安装成功！
-
-## 🚀 开始使用
-
-### 方法 1: Python 代码
+Python：
 
 ```python
-from skills.trading_agents import TradingAgentsSkill
+from __init__ import TradingAgentsSkill
 
-# 创建技能
-skill = TradingAgentsSkill()
-
-# 分析股票
-result = skill.analyze_stock("NVDA", "2024-05-10")
-
-# 打印结果
+skill = TradingAgentsSkill(engine="signals")
+result = skill.analyze_stock("NVDA")
 print(f"建议：{result['action']}")
 print(f"置信度：{result['confidence']:.0%}")
 print(f"理由：{result['reasoning']}")
 ```
 
-### 方法 2: 命令行
+## 3. 启用 LLM engine（需要 TradingAgents + API key）
 
 ```bash
-# 分析 NVDA
-python skills/trading-agents/__init__.py NVDA
-
-# 快速分析 AAPL
-python skills/trading-agents/__init__.py AAPL --mode quick
-
-# 深度分析 MSFT（3 轮辩论）
-python skills/trading-agents/__init__.py MSFT --mode deep --debate-rounds 3
+pip install tradingagents
+export OPENAI_API_KEY=sk-your-api-key-here
+python __init__.py NVDA --engine llm --mode deep --debate-rounds 3
 ```
 
-### 方法 3: 在 OpenClaw 中
+若用本地 clone 的 TradingAgents（未发布到 PyPI 的 dev 版），用环境变量指路：
 
-直接在对话中说：
-```
-"分析一下 NVDA 股票"
-"AAPL 现在能买吗"
-"用多智能体分析 MSFT"
+```bash
+export TRADING_AGENTS_HOME=/path/to/TradingAgents-Official
 ```
 
-## 📊 理解输出
+获取 API Key：
 
-典型的分析结果包含：
+- OpenAI: https://platform.openai.com/api-keys
+- Google: https://makersuite.google.com/app/apikey
+- Anthropic: https://console.anthropic.com/settings/keys
+
+## 4. 理解输出
+
+三档 engine 返回同一套 schema：
 
 ```json
 {
-  "action": "BUY",           // 操作建议：BUY/SELL/HOLD
-  "quantity": 100,           // 建议数量
-  "confidence": 0.75,        // 置信度（0-1）
-  "reasoning": "...",        // 分析理由
-  "risk_level": "MEDIUM",    // 风险等级
-  "target_price": 950.00,    // 目标价
-  "stop_loss": 800.00        // 止损价
+  "action": "BUY",
+  "confidence": 0.75,
+  "reasoning": "...",
+  "risk_level": "MEDIUM",
+  "target_price": 950.00,
+  "stop_loss": 800.00,
+  "engine": "signals-v2"
 }
 ```
 
-## ⚙️ 常见配置
-
-### 更换 LLM 提供商
+## 5. 常见配置（仅 llm engine 生效）
 
 ```python
-skill = TradingAgentsSkill()
-skill.set_config("llm_provider", "anthropic")  # 或 google, xai
+skill = TradingAgentsSkill(engine="llm")
+skill.set_config("llm_provider", "anthropic")     # 或 google / xai
+skill.set_config("max_debate_rounds", 3)          # 辩论轮数，越多越慢越深
+skill.set_config("deep_think_llm", "gpt-5.2")     # 强模型
+skill.set_config("quick_think_llm", "gpt-5-mini") # 快模型
 ```
 
-### 调整辩论轮数
+## 6. 常见问题
 
-```python
-# 更多辩论 = 更深入分析，但更慢
-skill.set_config("max_debate_rounds", 3)
-```
+**导入错误 "No module named 'tradingagents'"**：未装 TradingAgents 时这是预期的——
+auto engine 会自动降级到 signals。需要 LLM 决策时执行 `pip install tradingagents`，
+或设 `TRADING_AGENTS_HOME` 指向本地 clone。
 
-### 使用不同的模型
+**LLM engine 慢**：多智能体多轮辩论本身耗时。用 `--mode quick`、减少
+`max_debate_rounds`、或换更快的 `quick_think_llm`。
 
-```python
-skill.set_config("deep_think_llm", "gpt-5.2")      # 强模型
-skill.set_config("quick_think_llm", "gpt-5-mini")  # 快模型
-```
+**signals engine 报数据不足**：某些标的历史不足 50 个交易日，换标的或缩短
+分析截止日期。
 
-## 🐛 常见问题
+## 7. 下一步
 
-### Q: 导入错误 "No module named 'tradingagents'"
+- 完整说明见 [README.md](README.md)
+- 功能细节见 [SKILL.md](SKILL.md)
+- 端到端示例见 [example_usage.py](example_usage.py)
+- 框架论文：[TradingAgents](https://arxiv.org/abs/2412.20138)
 
-**A:** 确保已安装 TradingAgents 依赖：
-```bash
-cd C:\Users\gaaiy\.openclaw\workspace\projects\TradingAgents-Official
-pip install -r requirements.txt
-```
+## 重要提醒
 
-### Q: API Key 错误
-
-**A:** 检查 `.env` 文件是否存在且 API Key 正确：
-```bash
-# 在 .env 文件中
-OPENAI_API_KEY=sk-...  # 确保没有多余空格
-```
-
-### Q: 分析很慢
-
-**A:** 这是正常的！多智能体分析需要：
-- 多个智能体协作
-- 多轮辩论
-- 大量数据获取
-
-**解决方法:**
-- 使用 `quick_analyze()` 快速模式
-- 减少辩论轮数：`set_config("max_debate_rounds", 1)`
-- 使用更快的模型：`set_config("quick_think_llm", "gpt-5-mini")`
-
-### Q: 结果不准确
-
-**A:** TradingAgents 是研究工具，不是投资建议！
-- 仅供学习和研究
-- 不要用于真实交易
-- 结果受多种因素影响（模型、数据、市场条件）
-
-## 📚 下一步
-
-- 阅读完整的 [README.md](README.md)
-- 查看 [SKILL.md](SKILL.md) 了解详细功能
-- 运行 [example_usage.py](example_usage.py) 看更多示例
-- 阅读 [TradingAgents 论文](https://arxiv.org/abs/2412.20138)
-
-## ⚠️ 重要提醒
-
-**TradingAgents 仅供研究使用！**
-
-- ❌ 不构成投资建议
-- ❌ 不保证交易表现
-- ⚠️ 使用风险自负
-
-祝你使用愉快！🎉
+TradingAgents / signals 都是研究工具，不构成投资建议，不保证交易表现，使用风险自负。
